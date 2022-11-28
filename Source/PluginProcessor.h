@@ -15,28 +15,31 @@
 //#include <torch/csrc/jit/serialization/export.h>
 #include "EngineUpdater.h"
 #include "FifoBuffer.h"
-#include "Rave.h"
+// #include "Rave.h"
+#include "LLModel.h"
 
+// TODO: need to set FIFO lengths / size var on engine change, from model block_size...
 #define DEFAULT_FIFO_LENGTH 2048
+#define MAX_LOOPS 10
 #define EPSILON 0.0000001
 
 namespace rave_parameters
 {
-    const String param_name_temperature {"temperature"};
+    // const String param_name_temperature {"temperature"};
     const String param_name_wetgain {"wet_gain"};
     const String param_name_drygain {"dry_gain"};
-    const String param_name_toggleprior {"toggle_prior"};
+    // const String param_name_toggleprior {"toggle_prior"};
     const String param_name_importbutton {"import_button"};
 }
 //==============================================================================
 /**
 */
-class RAVEAuditionAudioProcessor  : public juce::AudioProcessor, public juce::AudioProcessorValueTreeState::Listener
+class LivingLooperAudioProcessor  : public juce::AudioProcessor, public juce::AudioProcessorValueTreeState::Listener
 {
 public:
     //==============================================================================
-    RAVEAuditionAudioProcessor();
-    ~RAVEAuditionAudioProcessor() override;
+    LivingLooperAudioProcessor();
+    ~LivingLooperAudioProcessor() override;
 
     //==============================================================================
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
@@ -78,7 +81,8 @@ public:
     auto getIsMuted() -> const bool;
     void updateEngine(const std::string modelFile);
     
-    std::unique_ptr<RAVE> mRave;
+    std::unique_ptr<LLModel> model;
+    int mLoopSelect;
 
 private:
     
@@ -110,10 +114,10 @@ private:
     FloatFifo mInputFifo;
     FloatFifo mOutputFifo;
     
-    std::atomic<float>* mTemperatureParameterValue;
+    // std::atomic<float>* mTemperatureParameterValue;
     std::atomic<float>* mWetGainParameterValue;
     std::atomic<float>* mDryGainParameterValue;
-    std::atomic<float>* mTogglePriorParameterValue;
+    // std::atomic<float>* mTogglePriorParameterValue;
     std::atomic<bool> mIsMuted { true };
     
     enum class muting : int
@@ -132,5 +136,5 @@ private:
     
     
     //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RAVEAuditionAudioProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LivingLooperAudioProcessor)
 };
