@@ -46,6 +46,7 @@ auto UpdateEngineJob::runJob() -> JobStatus
     }
     
     mProcessor.model->load(mModelFile);
+    mProcessor.qNLoops.push(mProcessor.model->n_loops);
     
     mProcessor.unmute();
     

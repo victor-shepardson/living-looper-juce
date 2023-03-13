@@ -14,6 +14,6 @@ VST/AU Plugin for the Living Looper
 
 ### Acknowledgements
 
-Antoine Caillon's RAVE autoencoder: https://github.com/acids-ircam/RAVE
+Antoine Caillon and IRCAM-ACIDS' RAVE autoencoder: https://github.com/acids-ircam/RAVE
 
 Andrew Fyfe and Bogdan Teleaga's RAVE-audition JUCE plugin: https://github.com/Fyfe93/RAVE-audition

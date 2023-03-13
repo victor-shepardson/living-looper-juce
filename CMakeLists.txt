@@ -116,9 +116,9 @@ juce_generate_juce_header(living-looper)
 
 target_sources(living-looper
     PRIVATE
+        ../living-looper-core/LLModel.hpp
         Source/PluginEditor.cpp
         Source/PluginProcessor.cpp
-        Source/LLModel.h
         Source/FifoBuffer.h
         Source/EngineUpdater.cpp
         Source/EngineUpdater.h)

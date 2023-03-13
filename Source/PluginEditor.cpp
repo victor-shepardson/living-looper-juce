@@ -20,19 +20,11 @@ LivingLooperAudioProcessorEditor::LivingLooperAudioProcessorEditor (
     mLogo.reset(new ImageComponent());
     mLogo->setImage(
       ImageCache::getFromMemory(
-        BinaryData::rave_logo_transparent_white_png, 
-        BinaryData::rave_logo_transparent_white_pngSize));
+        BinaryData::wiggly_png, 
+        BinaryData::wiggly_pngSize)
+        .getClippedImage(Rectangle<int>(0, 400, 3200, 2000))
+        );
     addAndMakeVisible(mLogo.get());
-    
-    // addAndMakeVisible(&mTemperatureSlider);
-    // mTemperatureSlider.setSliderStyle(Slider::SliderStyle::RotaryVerticalDrag);
-    // mTemperatureSlider.setTextBoxStyle(Slider::TextEntryBoxPosition::TextBoxBelow, false, 50, 20);
-    // const Colour tempColour(0xfffe00ee);
-    // mTemperatureSlider.setColour(Slider::ColourIds::rotarySliderFillColourId, tempColour);
-    // mTemperatureSlider.setColour(Slider::ColourIds::thumbColourId, Colours::white);
-    // mTemperatureSliderAttachment.reset(new SliderAttachment(mAVTS,
-                                                            // rave_parameters::param_name_temperature,
-                                                            // mTemperatureSlider));
     
     addAndMakeVisible(&mWetGainSlider);
     mWetGainSlider.setSliderStyle(Slider::SliderStyle::RotaryVerticalDrag);
@@ -54,12 +46,6 @@ LivingLooperAudioProcessorEditor::LivingLooperAudioProcessorEditor (
     mDrySliderAttachment.reset(new SliderAttachment(
       mAVTS, rave_parameters::param_name_drygain, mDryGainSlider));
     
-    // addAndMakeVisible(&mTogglePrior);
-    // mTogglePrior.setButtonText("Use Prior");
-    // mTogglePriorAttachment.reset(new ButtonAttachment(mAVTS,
-                                                      // rave_parameters::param_name_toggleprior,
-                                                      // mTogglePrior));
-    
     addAndMakeVisible(&mImportButton);
     mImportButton.setButtonText("IMPORT");
     mImportButton.setClickingTogglesState(true);
@@ -67,16 +53,22 @@ LivingLooperAudioProcessorEditor::LivingLooperAudioProcessorEditor (
       mAVTS, rave_parameters::param_name_importbutton, mImportButton));
     
     addAndMakeVisible(&mWetGainLabel);
-    mWetGainLabel.setText("WET", NotificationType::dontSendNotification);
-    mWetGainLabel.setJustificationType(Justification::centred);
+    mWetGainLabel.setText(
+      "WET", NotificationType::dontSendNotification);
+    mWetGainLabel.setJustificationType(
+      Justification::centred);
     
     addAndMakeVisible(&mDryGainLabel);
-    mDryGainLabel.setText("DRY", NotificationType::dontSendNotification);
-    mDryGainLabel.setJustificationType(Justification::centred);
+    mDryGainLabel.setText(
+      "DRY", NotificationType::dontSendNotification);
+    mDryGainLabel.setJustificationType(
+      Justification::centred);
     
     addAndMakeVisible(&mActiveLoopLabel);
-    mActiveLoopLabel.setText("0", NotificationType::dontSendNotification);
-    mActiveLoopLabel.setJustificationType(Justification::centred);
+    mActiveLoopLabel.setText(
+      "0", NotificationType::dontSendNotification);
+    mActiveLoopLabel.setJustificationType(
+      Justification::centred);
     
     // addAndMakeVisible(&mTemperatureLabel);
     // mTemperatureLabel.setText("HEAT", NotificationType::dontSendNotification);
@@ -84,7 +76,7 @@ LivingLooperAudioProcessorEditor::LivingLooperAudioProcessorEditor (
 
     
     setResizable(true, true);
-    getConstrainer()->setMinimumSize(400, 200);
+    getConstrainer()->setMinimumSize(400, 250);
     
     setSize(800, 500);
 }
@@ -98,6 +90,29 @@ void LivingLooperAudioProcessorEditor::paint (juce::Graphics& g)
 {
     // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll (APPLE_BLACK);
+
+    // Loop Select
+    auto q = audioProcessor.qLoopSelect;
+    int loop_select = -1;
+    while (!q.empty()){
+      loop_select = q.front();
+      q.pop();
+    }
+    if (loop_select >= 0){
+      mActiveLoopLabel.setText(
+        std::to_string(loop_select), NotificationType::dontSendNotification);
+    }
+
+    // N Loops
+    auto q = audioProcessor.qNLoops;
+    int n_loops = 0;
+    while (!q.empty()){
+      n_loops = q.front();
+      q.pop();
+    }
+    /// create per-loop elements
+
+
 }
 
 void LivingLooperAudioProcessorEditor::resized()
@@ -105,7 +120,7 @@ void LivingLooperAudioProcessorEditor::resized()
     // This is generally where you'll want to lay out the positions of any
     // subcomponents in your editor..
     
-    mLogo->setBoundsRelative(0.f, 0.f, 1.f, 0.7f);
+    mLogo->setBoundsRelative(0.f, 0.f, 1.f, 1.f);
     
     Rectangle<float> mRelBounds { 0.f, 0.f, 1.f, 1.f };
     mRelBounds.removeFromBottom(0.075f);
