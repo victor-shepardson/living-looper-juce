@@ -17,6 +17,7 @@
 //#include <torch/csrc/jit/runtime/graph_executor.h>
 //#include <torch/csrc/jit/serialization/export.h>
 #include "EngineUpdater.h"
+#include "Param.h"
 
 // TODO: need to set FIFO lengths / size var on engine change, from model block_size...
 #define DEFAULT_FIFO_LENGTH 2048
@@ -26,8 +27,8 @@
 namespace rave_parameters
 {
     // const String param_name_temperature {"temperature"};
-    const String param_name_wetgain {"wet_gain"};
-    const String param_name_drygain {"dry_gain"};
+    // const String param_name_wetgain {"wet_gain"};
+    // const String param_name_drygain {"dry_gain"};
     // const String param_name_toggleprior {"toggle_prior"};
     const String param_name_importbutton {"import_button"};
 }
@@ -87,46 +88,25 @@ public:
     std::queue<int> qLoopSelect;
     std::queue<int> qNLoops;
 
+    // std::vector<Param<float>*> mParams;
+    std::map<String, Param<float>*> mParams;
+
+    juce::AudioProcessorValueTreeState mAVTS;
+
 private:
     
     mutable CriticalSection mEngineUpdateMutex;
-    juce::AudioProcessorValueTreeState mAVTS;
     std::unique_ptr<FileChooser> fc;
     std::unique_ptr<juce::ThreadPool> mEngineThreadPool;
     
-    /*
-    *Allocate some memory to use as the FifoBuffer storage
-    *for each of the FifoBuffer types to be created
-    */
-    // const int mFifoSize { DEFAULT_FIFO_LENGTH };
-    // float mInputFifoBuffer[DEFAULT_FIFO_LENGTH];
-    // float mTempBuffer[DEFAULT_FIFO_LENGTH];
-    // std::vector<float> mHostFifoBuffer;
-    // std::vector<float> mOutputFifoBuffer;
-
-    // float* mInFifoBuffer { nullptr };
-    // float* mOutFifoBuffer { nullptr };
     std::vector<float> inBuffer;
     std::vector<float> outBuffer;
     size_t inIdx, outIdx;
 
     bool first_block_done;
 
-
-    /*
-    * Call the macro which creates a
-    * type-specific FifoBuffer definition
-    */
-    // FifoBuffer_typedef(float,FloatFifo);
-    
-    // FloatFifo mHostFifo;
-    // FloatFifo mInputFifo;
-    // FloatFifo mOutputFifo;
-    
-    // std::atomic<float>* mTemperatureParameterValue;
-    std::atomic<float>* mWetGainParameterValue;
-    std::atomic<float>* mDryGainParameterValue;
-    // std::atomic<float>* mTogglePriorParameterValue;
+    // std::atomic<float>* mWetGainParameterValue;
+    // std::atomic<float>* mDryGainParameterValue;
     std::atomic<bool> mIsMuted { true };
     
     enum class muting : int
@@ -139,9 +119,8 @@ private:
     std::atomic<muting> mFadeScheduler { muting::mute };
     LinearSmoothedValue<float> mSmoothedFadeInOut;
     
-    LinearSmoothedValue<float> mSmoothedWetGain;
-    LinearSmoothedValue<float> mSmoothedDryGain;
-    
+    // LinearSmoothedValue<float> mSmoothedWetGain;
+    // LinearSmoothedValue<float> mSmoothedDryGain;
     
     
     //==============================================================================

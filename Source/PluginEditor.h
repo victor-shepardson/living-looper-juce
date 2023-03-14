@@ -41,11 +41,11 @@ private:
     
     std::unique_ptr<ImageComponent> mLogo;
     
-    Slider mWetGainSlider;
-    std::unique_ptr<SliderAttachment> mWetSliderAttachment;
+    // Slider mWetGainSlider;
+    // std::unique_ptr<SliderAttachment> mWetSliderAttachment;
     
-    Slider mDryGainSlider;
-    std::unique_ptr<SliderAttachment> mDrySliderAttachment;
+    // Slider mDryGainSlider;
+    // std::unique_ptr<SliderAttachment> mDrySliderAttachment;
     
     // Slider mTemperatureSlider;
     // std::unique_ptr<SliderAttachment> mTemperatureSliderAttachment;
@@ -56,8 +56,8 @@ private:
     TextButton mImportButton;
     std::unique_ptr<ButtonAttachment> mImportButtonAttachment;
     
-    Label mWetGainLabel;
-    Label mDryGainLabel;
+    // Label mWetGainLabel;
+    // Label mDryGainLabel;
     Label mActiveLoopLabel;
     // Label mTemperatureLabel;
 

@@ -119,7 +119,7 @@ target_sources(living-looper
         ../living-looper-core/LLModel.hpp
         Source/PluginEditor.cpp
         Source/PluginProcessor.cpp
-        Source/FifoBuffer.h
+        Source/Param.h
         Source/EngineUpdater.cpp
         Source/EngineUpdater.h)
 
