@@ -24,24 +24,11 @@ LivingLooperAudioProcessor::LivingLooperAudioProcessor()
         *this, nullptr, Identifier("LLValueTree"), createParameterLayout())
 #endif
 {
-    // FloatFifo* inputfifo_p=&mInputFifo;
-    // FloatFifo* outputfifo_p=&mOutputFifo;
-    // FloatFifo* hostfifo_p=&mHostFifo;
-    
-    // mHostFifoBuffer.resize(DEFAULT_FIFO_LENGTH);
-    // mOutputFifoBuffer.resize(DEFAULT_FIFO_LENGTH * MAX_LOOPS);
-    // FifoBuffer_init(hostfifo_p,DEFAULT_FIFO_LENGTH,float, mHostFifoBuffer.data());
-    // FifoBuffer_init(inputfifo_p,DEFAULT_FIFO_LENGTH,float, mInputFifoBuffer);
-    // FifoBuffer_init(outputfifo_p,DEFAULT_FIFO_LENGTH,float, mOutputFifoBuffer.data());
+
     inIdx = outIdx = 0;
     first_block_done = false;
     
     setLatencySamples(DEFAULT_FIFO_LENGTH);
-    
-    // mTemperatureParameterValue = mAVTS.getRawParameterValue(rave_parameters::param_name_temperature);
-    // mWetGainParameterValue = mAVTS.getRawParameterValue(rave_parameters::param_name_wetgain);
-    // mDryGainParameterValue = mAVTS.getRawParameterValue(rave_parameters::param_name_drygain);
-    // mTogglePriorParameterValue = mAVTS.getRawParameterValue(rave_parameters::param_name_toggleprior);
     
     mEngineThreadPool = std::make_unique<ThreadPool>(1);
     model.reset(new LivingLooper::LLModel());
@@ -229,15 +216,6 @@ void LivingLooperAudioProcessor::processBlock(
 
     // PRINT("MIDI handled");
     
-    // for (int i = totalNumInputChannels; i < totalNumOutputChannels; ++i) {
-    //     buffer.clear(i, 0, nSamples);
-    // }
-    // PRINT("buffer cleared");
-    
-    // FloatFifo* hostfifo_p=&mHostFifo;
-    // FloatFifo* inputfifo_p=&mInputFifo;
-    // FloatFifo* outputfifo_p=&mOutputFifo;
-    
     float* channelL;
     float* channelR;
     
@@ -279,24 +257,10 @@ void LivingLooperAudioProcessor::processBlock(
         pair.second->processBlock(mAVTS);
     }
 
-    // if there is no prepare() called,
-    // these lines change the values in mSmooth...
-    // how?
-    // they look unitialized and then become zeros...
-    // is this copying...
-    // yeah... c++...
+    // auto& here to get a reference,
+    // otherwise it will copy the smoother and not work right
     auto& smoothDryGain = mParams["dry"]->mSmooth;
     auto& smoothWetGain = mParams["wet"]->mSmooth;
-
-    // auto dry_val = mAVTS.getRawParameterValue("dry")->load();
-    // PRINT(&smoothDryGain);
-    // PRINT(dry_val);
-    // smoothDryGain.setTargetValue(dry_val);
-    // auto dry_gain = smoothDryGain.getNextValue();
-    // PRINT(dry_gain);
-
-    // smoothWetGain.setTargetValue(
-        // mAVTS.getRawParameterValue("wet")->load());
 
     for (int block = 0; block < io_blocks; ++block){
 
@@ -317,14 +281,11 @@ void LivingLooperAudioProcessor::processBlock(
         // PRINT("block processed");
 
         for (int i = 0; i < min_block; ++i) {
-            // auto dry_gain = mSmoothedDryGain.getNextValue();
-            // auto wet_gain = mSmoothedWetGain.getNextValue();
             auto dry_gain = smoothDryGain.getNextValue();
-            // PRINT(dry_gain);
             auto wet_gain = smoothWetGain.getNextValue();
             auto fade = mSmoothedFadeInOut.getNextValue();
             if (fade < EPSILON) mIsMuted.store(true);
-            // channelL[hostOutIdx] = channelR[hostOutIdx] = 0;
+
             channelL[hostOutIdx] *= dry_gain;
             channelR[hostOutIdx] *= dry_gain;
 
@@ -345,8 +306,6 @@ void LivingLooperAudioProcessor::processBlock(
             hostOutIdx++;
         }
     }
-    // PRINT(dry_gain);
-
 }
 
 //==============================================================================
