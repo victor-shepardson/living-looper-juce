@@ -11,75 +11,111 @@
 
 //==============================================================================
 LivingLooperAudioProcessorEditor::LivingLooperAudioProcessorEditor (
-  LivingLooperAudioProcessor& p, AudioProcessorValueTreeState& vts
-  ) : AudioProcessorEditor(&p), audioProcessor(p), mAVTS(vts){
+    LivingLooperAudioProcessor& p, 
+    AudioProcessorValueTreeState& vts
+    ) : 
+    AudioProcessorEditor(&p), audioProcessor(p), mAVTS(vts)
+{
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
     
     mLogo.reset(new ImageComponent());
     mLogo->setImage(
-      ImageCache::getFromMemory(
-        BinaryData::wiggly_png, 
-        BinaryData::wiggly_pngSize)
-        .getClippedImage(Rectangle<int>(0, 400, 3200, 2000))
-        );
+        ImageCache::getFromMemory(
+            BinaryData::wiggly_png, 
+            BinaryData::wiggly_pngSize
+        ).getClippedImage(Rectangle<int>(0, 400, 3200, 2000))
+    );
     addAndMakeVisible(mLogo.get());
     
     for (auto pair: audioProcessor.mParams){
-      pair.second->setupEditor(mAVTS, *this);
+        pair.second->setupEditor(mAVTS, *this);
     }
     
-    addAndMakeVisible(&mImportButton);
+    addAndMakeVisible(mImportButton);
     mImportButton.setButtonText("IMPORT");
     mImportButton.setClickingTogglesState(true);
     mImportButtonAttachment.reset(new ButtonAttachment(
-      mAVTS, rave_parameters::param_name_importbutton, mImportButton));
+        mAVTS, rave_parameters::param_name_importbutton, mImportButton));
     
-    addAndMakeVisible(&mActiveLoopLabel);
+    addAndMakeVisible(mActiveLoopLabel);
     mActiveLoopLabel.setText(
-      "0", NotificationType::dontSendNotification);
+        "0", NotificationType::dontSendNotification);
     mActiveLoopLabel.setJustificationType(
-      Justification::centred);
+        Justification::centred);
     
     setResizable(true, true);
     getConstrainer()->setMinimumSize(400, 250);
     
     setSize(800, 500);
-}
+
+    // Start the timer to periodically update the UI
+    startTimerHz(30);
+
+    mNLoops = 0;
+  }
 
 LivingLooperAudioProcessorEditor::~LivingLooperAudioProcessorEditor()
 {
-  for(auto p: audioProcessor.mParams){
-    p.second->destroyEditor();
-  }
+    for(auto p: audioProcessor.mParams){
+        p.second->destroyEditor();
+    }
 }
 
 //==============================================================================
+
+void LivingLooperAudioProcessorEditor::timerCallback()
+{
+    audioProcessor.mParams["wet"]->updateEditor(mAVTS);
+    audioProcessor.mParams["dry"]->updateEditor(mAVTS);
+
+    // Loop Select
+    auto& qls = audioProcessor.qLoopSelect;
+    int loop_select = -1;
+    while (!qls.empty()){
+        loop_select = qls.front();
+        qls.pop();
+    }
+    if (loop_select >= 0){
+        mActiveLoopLabel.setText(
+            std::to_string(loop_select),
+            NotificationType::dontSendNotification);
+    }
+
+    auto nLoops = audioProcessor.mNLoops.load();
+    nLoops = std::min(audioProcessor.mLoopParams.size(), nLoops);
+
+    if (nLoops != mNLoops){
+        mNLoops = nLoops;
+        layoutLoops();
+    }
+
+    for (int i = 0; i < mNLoops; ++i){
+        auto p = audioProcessor.mLoopParams[i];
+        p->updateEditor(mAVTS);
+    }
+}
+
 void LivingLooperAudioProcessorEditor::paint (juce::Graphics& g)
 {
     g.fillAll(APPLE_BLACK);
+}
 
-    // Loop Select
-    auto qls = audioProcessor.qLoopSelect;
-    int loop_select = -1;
-    while (!qls.empty()){
-      loop_select = qls.front();
-      qls.pop();
+void LivingLooperAudioProcessorEditor::layoutLoops()
+{
+    Rectangle<float> mRelBounds { 0.f, 0.f, 1.f, 1.f };
+    auto &lp = audioProcessor.mLoopParams;
+    auto offset = 1./(mNLoops+1);
+    mRelBounds.removeFromLeft(offset/2);
+    for (int i = 0; i < lp.size(); ++i){
+        if (i<mNLoops){
+            lp[i]->resizeEditor(mRelBounds.removeFromLeft(offset));
+            lp[i]->mSlider->setVisible(true);
+        }
+        else {
+            lp[i]->mSlider->setVisible(false);
+        }
     }
-    if (loop_select >= 0){
-      mActiveLoopLabel.setText(
-        std::to_string(loop_select), NotificationType::dontSendNotification);
-    }
-
-    // N Loops
-    auto qnl = audioProcessor.qNLoops;
-    int n_loops = 0;
-    while (!qnl.empty()){
-      n_loops = qnl.front();
-      qnl.pop();
-    }
-    /// create per-loop elements
-
 }
 
 void LivingLooperAudioProcessorEditor::resized()
@@ -127,9 +163,10 @@ void LivingLooperAudioProcessorEditor::resized()
     // mDryGainSlider.setBoundsRelative(bottomBounds.removeFromRight(0.3333333f));
 
     audioProcessor.mParams["wet"]->resizeEditor(
-      bottomBounds.removeFromRight(0.3333333f));
+        bottomBounds.removeFromRight(0.3333333f));
     audioProcessor.mParams["dry"]->resizeEditor(
-      bottomBounds.removeFromRight(0.3333333f));
+        bottomBounds.removeFromRight(0.3333333f));
 
+    layoutLoops();
     
 }

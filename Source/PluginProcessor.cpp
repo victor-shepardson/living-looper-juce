@@ -25,8 +25,8 @@ LivingLooperAudioProcessor::LivingLooperAudioProcessor()
 #endif
 {
 
-    inIdx = outIdx = 0;
-    first_block_done = false;
+    inIdx = 0;//= outIdx = 0;
+    // first_block_done = false;
     
     setLatencySamples(DEFAULT_FIFO_LENGTH);
     
@@ -34,6 +34,7 @@ LivingLooperAudioProcessor::LivingLooperAudioProcessor()
     model.reset(new LivingLooper::LLModel());
     
     mAVTS.addParameterListener(rave_parameters::param_name_importbutton, this);
+    mAVTS.addParameterListener(rave_parameters::param_name_loopselect, this);
 
 }
 
@@ -124,9 +125,9 @@ void LivingLooperAudioProcessor::prepareToPlay(
         PRINT('model loaded');
         PRINT(model->block_size);
         inBuffer.resize(model->block_size);
-        outBuffer.resize(model->block_size);
+        // outBuffer.resize(model->block_size);
         inBuffer.clear();
-        outBuffer.clear();
+        // outBuffer.clear();
     }
 
     mLoopSelect = 0;
@@ -187,7 +188,7 @@ void LivingLooperAudioProcessor::processBlock(
     int host_block = nSamples;
 
     inBuffer.assign(model_block, 0.0);
-    outBuffer.assign(model_block * n_loops, 0.0);
+    // outBuffer.assign(model_block * n_loops, 0.0);
 
     // PRINT("model access");
 
@@ -213,6 +214,7 @@ void LivingLooperAudioProcessor::processBlock(
         qLoopSelect.push(mLoopSelect);
         
     }
+
 
     // PRINT("MIDI handled");
     
@@ -262,19 +264,33 @@ void LivingLooperAudioProcessor::processBlock(
     auto& smoothDryGain = mParams["dry"]->mSmooth;
     auto& smoothWetGain = mParams["wet"]->mSmooth;
 
+    // auto r = float(std::rand())/RAND_MAX;
+    // // mAVTS.getRawParameterValue("wet")->store(r);
+    // for (auto p : mParams){
+    //     auto& name = p.first;
+    //     // TODO: if name starts with loop_
+    //     mAVTS.getRawParameterValue(name)->store(r);
+    // }
+
     for (int block = 0; block < io_blocks; ++block){
 
         for (int i = 0; i < min_block; ++i) {
-            // PRINT(inIdx); PRINT(hostInIdx);
             inBuffer[inIdx] = (channelL[hostInIdx] + channelR[hostInIdx])*0.5;
             hostInIdx++;
             inIdx++;
             if(inIdx == model_block){
                 //process block
-                // PRINT("model call");
-                model->forward(&inBuffer[0], mLoopSelect, 1, &outBuffer[0]);
-                outIdx = inIdx = 0;
-                first_block_done = true;
+                auto llOutput = model->forwardIValue(inBuffer.data(), mLoopSelect, 1); 
+                auto llTup = llOutput.toTupleRef().elements();
+                yTensor = llTup[0].toTensor();
+
+                auto acc = llTup[1].toTensor().accessor<float, 3>();
+                for (int j=0; j<n_loops; ++j){
+                    auto name = mLoopParams[j]->mName;
+                    auto val = std::min(1.f,std::max(0.f,acc[j][0][0]/5.f + 1.f));
+                    mAVTS.getRawParameterValue(name)->store(val);
+                }
+                inIdx = 0;
             }
         }
 
@@ -289,18 +305,15 @@ void LivingLooperAudioProcessor::processBlock(
             channelL[hostOutIdx] *= dry_gain;
             channelR[hostOutIdx] *= dry_gain;
 
-            if (model->loaded && first_block_done){
+            if (model->loaded && yTensor){
+                auto acc = yTensor.value().accessor<float, 3>();
 
                 for (int j=0; j<n_loops; j++){
-                    if (outIdx >= model_block*n_loops) {
-                        std::cout<<"indexing error"<<std::endl;
-                        outIdx = 0;
-                    }
                     // TODO: mixdown
                     // TODO: multichannel out
-                    channelL[hostOutIdx] += outBuffer[outIdx] * fade * wet_gain;
-                    channelR[hostOutIdx] += outBuffer[outIdx] * fade * wet_gain;
-                    outIdx++;
+                    auto v = acc[j][0][i];
+                    channelL[hostOutIdx] += v * fade * wet_gain;
+                    channelR[hostOutIdx] += v * fade * wet_gain;
                 }
             }
             hostOutIdx++;
@@ -360,9 +373,22 @@ auto LivingLooperAudioProcessor::createParameterLayout() -> AudioProcessorValueT
     // mParams.push_back(new Param<float>("wet", true, true));
     // mParams.push_back(new Param<float>("dry", true, true));
     mParams.insert({
-        {"wet", new Param<float>("wet")},
-        {"dry", new Param<float>("dry")}
+        {"wet", std::make_shared<Param<float>>("wet")},
+        {"dry", std::make_shared<Param<float>>("dry")}
     });
+
+    // it seems that dynamic parameter creation
+    // isn't really a thing.
+    // instead you can use a maximum number and try to hide
+    // the extras:
+    // https://forum.juce.com/t/remove-and-create-audio-parameters-after-processor-creation/36941/2
+    for(int l=0; l<MAX_LOOPS; ++l){
+        String s = "loop_" + std::to_string(l);
+        auto p = std::make_shared<Param<float>>(s, 666);
+        mLoopParams.push_back(p);
+        mParams.emplace(s, p);
+        // mParams.insert({{s, p}});
+    }
 
     std::vector<std::unique_ptr<RangedAudioParameter>> params;
 
@@ -372,10 +398,15 @@ auto LivingLooperAudioProcessor::createParameterLayout() -> AudioProcessorValueT
      
     // params.push_back(std::make_unique<AudioParameterFloat> (rave_parameters::param_name_wetgain, rave_parameters::param_name_wetgain, 0.0f, 1.0f, 1.f));
     
-    params.push_back(std::make_unique<AudioParameterBool> (
+    params.push_back(std::make_unique<AudioParameterBool>(
         rave_parameters::param_name_importbutton, 
         rave_parameters::param_name_importbutton, 
         false));
+
+    params.push_back(std::make_unique<AudioParameterInt>(
+        rave_parameters::param_name_loopselect, 
+        rave_parameters::param_name_loopselect, 
+        0, MAX_LOOPS, 0));
     
     return { params.begin(), params.end() };
     
@@ -409,6 +440,10 @@ void LivingLooperAudioProcessor::updateEngine(const std::string modelFile)
 
 void LivingLooperAudioProcessor::parameterChanged (const String& parameterID, float newValue)
 {
+    if(parameterID == rave_parameters::param_name_loopselect)
+    {
+
+    }
     if(parameterID == rave_parameters::param_name_importbutton)
     {
         fc.reset(new FileChooser(

@@ -19,15 +19,26 @@ class Param {
     // optional<LinearSmoothedValue<T>> mSmooth;
     LinearSmoothedValue<T> mSmooth;
     // optional<Label> mLabel;   
-    unique_ptr<Label> mLabel;   
+    unique_ptr<Label> mLabel;
+    std::optional<unique_ptr<ToggleButton>> mToggle;
+    int mButtonGroup;
 
     void setupEditor(
-            AudioProcessorValueTreeState& vts,
-            AudioProcessorEditor &editor
-            ){
+        AudioProcessorValueTreeState& vts,
+        AudioProcessorEditor &editor)
+    {
+        //toggle
+        if(mToggle){
+            auto& tgl = mToggle.value();
+            tgl.reset(new ToggleButton());
+            editor.addAndMakeVisible(tgl.get());
+            tgl->setButtonText(mName);
+            tgl->setRadioGroupId(mButtonGroup);
+        }
 
         //label
-        mLabel = make_unique<Label>();
+        mLabel.reset(new Label());
+        // mLabel = make_unique<Label>();
         editor.addAndMakeVisible(mLabel.get());
         mLabel->setText(
             mName, NotificationType::dontSendNotification);
@@ -35,8 +46,8 @@ class Param {
             Justification::centred);
 
         //slider
-        mSlider = make_unique<Slider>();
-
+        mSlider.reset(new Slider());
+        // mSlider = make_unique<Slider>();
         editor.addAndMakeVisible(mSlider.get());
         mSlider->setSliderStyle(
             Slider::SliderStyle::RotaryVerticalDrag);
@@ -55,24 +66,40 @@ class Param {
             vts, mName, *mSlider));
     }
 
-    void resizeEditor(
-            // AudioProcessorEditor &editor, 
-            Rectangle<float> bounds){
-        // resize
-        mSlider->setBoundsRelative(bounds);
-        mLabel->setBoundsRelative(
-            bounds.removeFromTop(1.0f));
-        // label
-        //...
+    // sync the parameter value back to the UI
+    void updateEditor(
+        AudioProcessorValueTreeState& vts)
+    {
+        auto val = vts.getRawParameterValue(mName)->load();
+        mSlider->setValue(val);
     }
 
+    void resizeEditor(
+        // AudioProcessorEditor &editor, 
+        Rectangle<float> bounds)
+    {
+        // resize
+        // bounds.removeFromBottom(0.5);
+        if(mToggle){
+            mToggle.value()->setBoundsRelative(bounds.removeFromTop(0.2f));
+        }
+        mSlider->setBoundsRelative(bounds.removeFromTop(0.3).removeFromBottom(0.3));
+        mLabel->setBoundsRelative(
+            bounds.removeFromTop(1.0f));
+    }
+
+    //UI stuff is short-lived and needs to be freed
     void destroyEditor(){
+        // attachment needs to go first
         mAttach.release();
         mSlider.release();
         mLabel.release();
+        if(mToggle){
+            mToggle.value().release();
+        }
     }
 
-    // TODO: template type
+    // TODO: parameters, template type
     unique_ptr<AudioParameterFloat> getParameter(){
         return make_unique<AudioParameterFloat>(
             mName, mName, 0.0f, 1.0f, 0.5f);
@@ -83,8 +110,6 @@ class Param {
         //     mSmooth->reset(sampleRate, 0.1);
         // }
         mSmooth.reset(sampleRate, 0.1);
-        // DBG("prepare");
-        // DBG(sampleRate);
     }
 
     void processBlock(
@@ -102,14 +127,16 @@ class Param {
 
     Param(
             // AudioProcessor &processor, 
-            String name){
+            String name, int buttonGroup=0){
         mName = name;
+        if (buttonGroup) {
+            mToggle.emplace();
+            mButtonGroup = buttonGroup;
+        }
         // if (smooth) mSmooth.emplace();
         // if (label) mLabel.emplace();
     }
     // ~Param(){
     //     mAttach.release();
-    //     mSlider.release();
-    //     mLabel.release();
     // }
 };

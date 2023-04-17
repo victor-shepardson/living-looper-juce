@@ -18,7 +18,7 @@ static const juce::Colour APPLE_BLACK { Colour::fromRGBA(28, 28, 30, 255) };
 //==============================================================================
 /**
 */
-class LivingLooperAudioProcessorEditor  : public juce::AudioProcessorEditor
+class LivingLooperAudioProcessorEditor  : public juce::AudioProcessorEditor, public Timer
 {
     
 typedef AudioProcessorValueTreeState::SliderAttachment SliderAttachment;
@@ -32,6 +32,11 @@ public:
     //==============================================================================
     void paint (juce::Graphics&) override;
     void resized() override;
+    void timerCallback() override;
+
+    void layoutLoops();
+
+    size_t mNLoops;
 
 private:
     // This reference is provided as a quick way for your editor to
@@ -55,6 +60,8 @@ private:
     
     TextButton mImportButton;
     std::unique_ptr<ButtonAttachment> mImportButtonAttachment;
+
+    std::vector<TextButton> mLoopButtons;
     
     // Label mWetGainLabel;
     // Label mDryGainLabel;

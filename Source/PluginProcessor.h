@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include <optional>
+
 #include <JuceHeader.h>
 // #include <torch/torch.h>
 // #include <torch/script.h>
@@ -31,6 +33,7 @@ namespace rave_parameters
     // const String param_name_drygain {"dry_gain"};
     // const String param_name_toggleprior {"toggle_prior"};
     const String param_name_importbutton {"import_button"};
+    const String param_name_loopselect {"loop_select"};
 }
 //==============================================================================
 /**
@@ -86,10 +89,18 @@ public:
 
     int mLoopSelect;
     std::queue<int> qLoopSelect;
-    std::queue<int> qNLoops;
+    std::atomic<size_t> mNLoops { 0 };
 
-    // std::vector<Param<float>*> mParams;
-    std::map<String, Param<float>*> mParams;
+    // TODO: probably wrong to use bare pointers here?
+    std::map<String, std::shared_ptr<Param<float>>> mParams;
+    std::vector<std::shared_ptr<Param<float>>> mLoopParams;
+
+    // std::optional<LivingLooper::ll_audio_t> yAccessor;
+    // std::optional<LivingLooper::ll_latent_t> zAccessor;
+    // std::unique_ptr<LivingLooper::ll_audio_t> yTensor;
+    std::optional<LivingLooper::ll_audio_t> yTensor;
+    // std::optional<LivingLooper::ll_latent_t> zTensor;
+    // LivingLooper::ll_latent_t zTensor;
 
     juce::AudioProcessorValueTreeState mAVTS;
 
@@ -100,10 +111,10 @@ private:
     std::unique_ptr<juce::ThreadPool> mEngineThreadPool;
     
     std::vector<float> inBuffer;
-    std::vector<float> outBuffer;
-    size_t inIdx, outIdx;
+    // std::vector<float> outBuffer;
+    size_t inIdx;//, outIdx;
 
-    bool first_block_done;
+    // bool first_block_done;
 
     // std::atomic<float>* mWetGainParameterValue;
     // std::atomic<float>* mDryGainParameterValue;
