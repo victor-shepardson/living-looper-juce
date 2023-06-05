@@ -199,7 +199,7 @@ void LivingLooperAudioProcessor::processBlock(
         if (msg.isNoteOn()){
             // TODO: oneshot
             // auto loop_num = msg.getNoteNumber()-59;
-            auto loop_num = (msg.getNoteNumber()+128-59)%(n_loops+1);
+            auto loop_num = (msg.getNoteNumber()+128-59)%(n_loops) + 1;
             // if (loop_num > 0 && loop_num <= n_loops){
             std::cout << "switch to loop: " << loop_num << std::endl;
             mLoopSelect = loop_num;
